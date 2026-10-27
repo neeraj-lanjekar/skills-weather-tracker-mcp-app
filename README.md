@@ -54,3 +54,30 @@ You ──prompt──▶ Copilot Agent Mode
 ---
 
 © 2026 • [MIT License](LICENSE)
+
+## Weather tracker CLI
+
+The CLI stores current weather observations in `weather.db` using the existing
+`weather_logs` table and the free Open-Meteo geocoding and forecast APIs.
+
+```sh
+npm install
+
+# Add a current observation
+node src/cli.js add "London"
+
+# List the 10 most recent observations (or set another positive limit)
+node src/cli.js list
+node src/cli.js list --limit 5
+
+# Show temperature statistics for a city
+node src/cli.js stats "London"
+```
+
+Equivalent npm scripts are available:
+
+```sh
+npm run add -- "London"
+npm run list -- --limit 5
+npm run stats -- "London"
+```
