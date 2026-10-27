@@ -81,3 +81,16 @@ npm run add -- "London"
 npm run list -- --limit 5
 npm run stats -- "London"
 ```
+
+## Web dashboard
+
+Start the dashboard on port 3000:
+
+```sh
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) to add or refresh a city,
+view recent observations, compare city summaries, and see the temperature
+history chart. The dashboard uses Chart.js from jsDelivr and the same SQLite
+database as the CLI.
