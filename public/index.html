@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b172a">
+    <title>Weather Tracker</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b172a;
+        color: #e8eef8;
+        font-synthesis: none;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          radial-gradient(ellipse at 82% -10%, rgba(35, 91, 150, 0.28), transparent 38rem),
+          #0b172a;
+      }
+
+      main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 48px 0 64px; }
+      .eyebrow { color: #67d8c0; font-size: 0.75rem; font-weight: 750; letter-spacing: 0.16em; text-transform: uppercase; }
+      h1 { margin: 10px 0 8px; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -0.045em; }
+      .intro { margin: 0; color: #9cacc2; }
+
+      .toolbar, .panel, .summary-card {
+        border: 1px solid rgba(164, 187, 217, 0.13);
+        border-radius: 16px;
+        background: rgba(17, 32, 54, 0.84);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      }
+
+      .toolbar { display: flex; gap: 12px; margin: 30px 0; padding: 14px; }
+      input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid #293d5a;
+        border-radius: 10px;
+        padding: 12px 14px;
+        background: #0c192c;
+        color: #e8eef8;
+        font: inherit;
+        outline: none;
+      }
+      input:focus { border-color: #67d8c0; }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 0 19px;
+        background: #67d8c0;
+        color: #092119;
+        font: inherit;
+        font-weight: 750;
+        cursor: pointer;
+      }
+      button:disabled { cursor: wait; opacity: 0.65; }
+      #message { min-height: 1.4em; margin: -20px 2px 20px; color: #9cacc2; }
+      #message.error { color: #ff9a9a; }
+
+      .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 34px 0 14px; }
+      h2 { margin: 0; font-size: 1.15rem; letter-spacing: -0.02em; }
+      .section-note { color: #8192aa; font-size: 0.85rem; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+      .summary-card { padding: 19px; }
+      .summary-city { color: #9cacc2; font-size: 0.9rem; }
+      .summary-temp { margin: 12px 0 7px; font-size: 2rem; font-weight: 750; letter-spacing: -0.04em; }
+      .summary-detail { color: #8192aa; font-size: 0.82rem; }
+
+      .panel { padding: 20px; }
+      .chart-wrap { position: relative; height: 300px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+      th { padding: 12px; color: #8192aa; font-size: 0.75rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+      td { padding: 13px 12px; border-top: 1px solid rgba(164, 187, 217, 0.1); color: #dce5f1; font-size: 0.9rem; }
+      .empty { color: #8192aa; text-align: center; }
+
+      @media (max-width: 560px) {
+        main { width: min(100% - 24px, 1120px); padding-top: 32px; }
+        .toolbar { flex-direction: column; }
+        button { min-height: 46px; }
+        .panel { padding: 14px; }
+        .chart-wrap { height: 240px; }
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Mona's Weather Tracker</div>
+        <h1>Weather, at a glance.</h1>
+        <p class="intro">Live conditions and your recent observations, all in one place.</p>
+      </header>
+
+      <form class="toolbar" id="refresh-form">
+        <input id="city-input" name="city" type="text" placeholder="Enter a city, e.g. London" maxlength="100" required>
+        <button id="refresh-button" type="submit">Add / Refresh</button>
+      </form>
+      <p id="message" role="status" aria-live="polite"></p>
+
+      <section aria-labelledby="summary-heading">
+        <div class="section-heading">
+          <h2 id="summary-heading">City summary</h2>
+          <span class="section-note">Latest and all-time average · °C</span>
+        </div>
+        <div class="cards" id="summary-cards"></div>
+      </section>
+
+      <section aria-labelledby="chart-heading">
+        <div class="section-heading">
+          <h2 id="chart-heading">Temperature history</h2>
+          <span class="section-note">Up to 50 recent observations</span>
+        </div>
+        <div class="panel chart-wrap">
+          <canvas id="temperature-chart" aria-label="Temperature line chart" role="img"></canvas>
+        </div>
+      </section>
+
+      <section aria-labelledby="logs-heading">
+        <div class="section-heading">
+          <h2 id="logs-heading">Recent logs</h2>
+          <span class="section-note">Newest first · up to 50 records</span>
+        </div>
+        <div class="panel table-wrap">
+          <table>
+            <thead>
+              <tr><th>City</th><th>Temperature</th><th>Condition</th><th>Humidity</th><th>Wind</th><th>Logged</th></tr>
+            </thead>
+            <tbody id="logs-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const message = document.querySelector("#message");
+      const refreshForm = document.querySelector("#refresh-form");
+      const refreshButton = document.querySelector("#refresh-button");
+      const cityInput = document.querySelector("#city-input");
+      const summaryCards = document.querySelector("#summary-cards");
+      const logsBody = document.querySelector("#logs-body");
+      let temperatureChart;
+
+      // Format a stored timestamp for display.
+      function formatDate(value) {
+        const date = new Date(`${value.replace(" ", "T")}Z`);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+      }
+
+      // Fetch JSON and turn API errors into useful messages.
+      async function fetchJson(url, options) {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "The request could not be completed.");
+        return data;
+      }
+
+      // Create a text-only element to keep API values out of HTML markup.
+      function textElement(tag, className, text) {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        element.textContent = text;
+        return element;
+      }
+
+      // Render per-city latest and average temperatures with observation counts.
+      function renderSummary(summary) {
+        summaryCards.replaceChildren();
+        if (summary.length === 0) {
+          summaryCards.append(textElement("p", "section-note", "No weather observations yet. Add a city to get started."));
+          return;
+        }
+
+        for (const city of summary) {
+          const card = document.createElement("article");
+          card.className = "summary-card";
+          card.append(textElement("div", "summary-city", city.city));
+          card.append(textElement("div", "summary-temp", `${Number(city.latest_temperature_c).toFixed(1)}°C`));
+          card.append(textElement(
+            "div",
+            "summary-detail",
+            `Avg ${Number(city.average_temperature_c).toFixed(1)}°C · ${city.log_count} ${city.log_count === 1 ? "log" : "logs"}`,
+          ));
+          summaryCards.append(card);
+        }
+      }
+
+      // Render the recent observations in newest-first order.
+      function renderLogs(logs) {
+        logsBody.replaceChildren();
+        if (logs.length === 0) {
+          const row = document.createElement("tr");
+          const cell = textElement("td", "empty", "No weather logs yet. Add a city above.");
+          cell.colSpan = 6;
+          row.append(cell);
+          logsBody.append(row);
+          return;
+        }
+
+        for (const log of logs) {
+          const row = document.createElement("tr");
+          const values = [
+            log.country ? `${log.city}, ${log.country}` : log.city,
+            `${Number(log.temperature_c).toFixed(1)}°C`,
+            log.condition,
+            `${log.humidity}%`,
+            `${Number(log.wind_kmh).toFixed(1)} km/h`,
+            formatDate(log.created_at),
+          ];
+          for (const value of values) row.append(textElement("td", "", String(value)));
+          logsBody.append(row);
+        }
+      }
+
+      // Draw one temperature line per city from the recent log set.
+      function renderChart(logs) {
+        if (!window.Chart) {
+          message.textContent = "The chart library could not be loaded. The logs and summaries are still available.";
+          message.classList.add("error");
+          return;
+        }
+
+        const colors = ["#67d8c0", "#78a8ff", "#ffbd69", "#d5a6ff", "#ff8295", "#9cdb76"];
+        const cities = [...new Set(logs.map((log) => log.city))];
+        const chronologicalLogs = [...logs].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at) || left.id - right.id,
+        );
+        const labels = chronologicalLogs.map((log) => log.created_at);
+        const datasets = cities.map((city, index) => {
+          const color = colors[index % colors.length];
+          return {
+            label: city,
+            data: chronologicalLogs.map((log) => log.city === city ? log.temperature_c : null),
+            borderColor: color,
+            backgroundColor: color,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            tension: 0.28,
+            spanGaps: true,
+          };
+        });
+
+        if (temperatureChart) temperatureChart.destroy();
+        temperatureChart = new Chart(document.querySelector("#temperature-chart"), {
+          type: "line",
+          data: { labels: labels.map(formatDate), datasets },
+          options: {
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: "index" },
+            plugins: { legend: { labels: { color: "#b8c5d8" } } },
+            scales: {
+              x: { ticks: { color: "#8192aa", maxRotation: 0, autoSkip: true }, grid: { color: "rgba(164,187,217,.08)" } },
+              y: { title: { display: true, text: "Temperature (°C)", color: "#8192aa" }, ticks: { color: "#8192aa" }, grid: { color: "rgba(164,187,217,.08)" } },
+            },
+          },
+        });
+      }
+
+      // Refresh all dashboard views from the latest API data.
+      async function loadDashboard() {
+        const [logs, summary] = await Promise.all([
+          fetchJson("/api/logs"),
+          fetchJson("/api/summary"),
+        ]);
+        renderSummary(summary);
+        renderLogs(logs);
+        renderChart(logs);
+      }
+
+      // Fetch and save a city's current weather, then refresh the dashboard.
+      refreshForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const city = cityInput.value.trim();
+        if (!city) return;
+
+        refreshButton.disabled = true;
+        message.classList.remove("error");
+        message.textContent = `Fetching weather for ${city}…`;
+        try {
+          const result = await fetchJson(`/api/refresh?city=${encodeURIComponent(city)}`, { method: "POST" });
+          await loadDashboard();
+          message.textContent = `Added ${result.weather.city}: ${Number(result.weather.temperature_c).toFixed(1)}°C, ${result.weather.condition}.`;
+          cityInput.value = "";
+        } catch (error) {
+          message.textContent = error.message;
+          message.classList.add("error");
+        } finally {
+          refreshButton.disabled = false;
+        }
+      });
+
+      // Load saved observations when the dashboard first opens.
+      loadDashboard().catch((error) => {
+        message.textContent = error.message;
+        message.classList.add("error");
+      });
+    </script>
+  </body>
+</html>
