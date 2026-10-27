@@ -1,8 +1,8 @@
 # Weather log verification
 
-Checked `weather.db` read-only on 2026-10-27. The SQLite MCP server was not
-available in this session, so these checks were run directly against the local
-SQLite database.
+Checked the `weather_logs` table in `weather.db` read-only on 2026-10-27. The
+SQLite MCP server was not available in this session, so these checks were run
+directly against the local SQLite database.
 
 ## City summary
 
